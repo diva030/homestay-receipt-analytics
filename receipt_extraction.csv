@@ -1,0 +1,7 @@
+﻿filename,receipt_no,booking_date,check_in,check_out,customer,amount_rm,payment_status,payment_method,review_status
+AR001.pdf,AR001,05/01/2026,15/01/2026,16/01/2026,Sample Customer A,1200.0,PAID,Bank Transfer,OK
+AR002.pdf,AR002,12/01/2026,24/01/2026,26/01/2026,Sample Customer B,1500.0,PAID,Online Payment,OK
+AR003.pdf,AR003,03/02/2026,14/02/2026,16/02/2026,Sample Customer C,1800.0,PAID,Bank Transfer,OK
+AR004.pdf,AR004,10/02/2026,21/02/2026,22/02/2026,Sample Customer D,1000.0,PENDING,Not recorded,OK
+AR005.pdf,AR005,08/03/2026,20/03/2026,22/03/2026,Sample Customer E,2000.0,PAID,Online Payment,OK
+AR006.pdf,AR006,15/03/2026,28/03/2026,30/03/2026,Sample Customer F,1400.0,PENDING,Not recorded,OK
