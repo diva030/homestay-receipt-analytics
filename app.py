@@ -37,11 +37,15 @@ st.markdown(
         color: #F5F0E5;
     }
 
-    .block-container {
-        max-width: 1450px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-    }
+   
+.block-container {
+    max-width: 100%;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+}
+
 
     section[data-testid="stSidebar"] {
         background: #141310;
@@ -124,6 +128,29 @@ st.markdown(
     div[data-testid="stAlert"] {
         border-radius: 10px;
     }
+    
+/* Clearer dashboard section hierarchy */
+div[data-testid="stVerticalBlock"] > div {
+    gap: 0.85rem;
+}
+
+/* More breathing room around section headings */
+h2 {
+    margin-top: 1.4rem;
+    margin-bottom: 0.7rem;
+}
+
+/* Keep the main title prominent */
+h1 {
+    font-size: 2.4rem !important;
+    line-height: 1.2 !important;
+}
+
+/* Comfortable chart spacing */
+div[data-testid="stPlotlyChart"] {
+    margin-top: 0.4rem;
+    margin-bottom: 1rem;
+}
     </style>
     """,
     unsafe_allow_html=True,
