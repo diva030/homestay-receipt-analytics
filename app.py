@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+import numpy as np
 
 # --------------------------------------------------
 # PAGE CONFIGURATION
@@ -563,6 +564,181 @@ else:
         display_monthly,
         use_container_width=True,
         hide_index=True,
+    )
+
+# --------------------------------------------------
+# FUTURE INSIGHTS & EXPLORATORY OUTLOOK
+# --------------------------------------------------
+st.divider()
+st.subheader("🔮 Future Insights")
+st.caption(
+    "Exploratory estimates based on available receipt data. "
+    "These are not guaranteed forecasts."
+)
+
+if filtered.empty:
+    st.info("Select receipts using the sidebar filters to generate insights.")
+else:
+    insight_left, insight_right = st.columns(2)
+
+    # Payment risk insight
+    pending_total = filtered.loc[
+        filtered["payment_status"] == "PENDING",
+        "amount_rm",
+    ].sum()
+
+    valid_amounts = filtered["amount_rm"].dropna()
+    total_amount = valid_amounts.sum()
+
+    with insight_left:
+        st.markdown("### 💳 Payment Outlook")
+
+        if pending_total > 0:
+            pending_share = (
+                pending_total / total_amount * 100
+                if total_amount > 0
+                else 0
+            )
+
+            st.metric(
+                "Amount Still Pending",
+                f"RM {pending_total:,.2f}",
+            )
+
+            st.write(
+                f"Pending amounts represent approximately "
+                f"{pending_share:.1f}% of the selected receipt value."
+            )
+
+            st.info(
+                "Suggested action: review pending receipts and "
+                "confirm payment status before taking further action."
+            )
+        else:
+            st.success(
+                "No positive pending amount appears in the selected records."
+            )
+
+    # Monthly trend and exploratory estimate
+    with insight_right:
+        st.markdown("### 📈 Revenue Trend")
+
+        monthly_values = (
+            filtered.dropna(subset=["booking_month"])
+            .groupby("booking_month")["amount_rm"]
+            .sum()
+            .sort_index()
+        )
+
+        if len(monthly_values) >= 2:
+            previous_value = float(monthly_values.iloc[-2])
+            latest_value = float(monthly_values.iloc[-1])
+
+            if previous_value > 0:
+                change_pct = (
+                    (latest_value - previous_value)
+                    / previous_value
+                    * 100
+                )
+
+                st.metric(
+                    "Latest Month vs Previous Month",
+                    f"{change_pct:+.1f}%",
+                )
+            else:
+                st.write(
+                    "The previous month had zero or negative value, "
+                    "so a percentage comparison is not meaningful."
+                )
+
+            if latest_value > previous_value:
+                st.write(
+                    "Receipt value increased compared with the previous month."
+                )
+            elif latest_value < previous_value:
+                st.write(
+                    "Receipt value decreased compared with the previous month."
+                )
+            else:
+                st.write(
+                    "Receipt value was unchanged compared with the previous month."
+                )
+        else:
+            st.info(
+                "At least two months of receipt data are needed "
+                "to compare monthly values."
+            )
+
+    st.markdown("### 🗓️ Next-Month Receipt Value Estimate")
+
+    monthly_values = (
+        filtered.dropna(subset=["booking_month"])
+        .groupby("booking_month")["amount_rm"]
+        .sum()
+        .sort_index()
+    )
+
+    if len(monthly_values) >= 3:
+        # Fit a simple straight-line trend to monthly totals.
+        # This is an exploratory estimate, not a robust forecast.
+        y = monthly_values.to_numpy(dtype=float)
+        x = np.arange(len(y), dtype=float)
+
+        slope, intercept = np.polyfit(x, y, 1)
+        estimate = max(0.0, float(slope * len(y) + intercept))
+
+        last_month = pd.Period(
+            str(monthly_values.index[-1]),
+            freq="M",
+        )
+        next_month = last_month + 1
+
+        st.metric(
+            f"Indicative estimate for {next_month}",
+            f"RM {estimate:,.2f}",
+        )
+
+        st.caption(
+            "Method: straight-line trend fitted to monthly receipt totals. "
+            "This simple method does not account for seasonality, future "
+            "bookings, cancellations, or changes in prices."
+        )
+
+        st.warning(
+            "Use this estimate for practice and exploration only. "
+            "Three or a few monthly observations are not enough to "
+            "establish a dependable business forecast."
+        )
+    else:
+        st.info(
+            "Collect at least three distinct months of receipt data "
+            "to display this exploratory estimate. More historical "
+            "data will be needed for a meaningful forecast."
+        )
+
+    st.markdown("### 💡 Suggested Next Actions")
+
+    if pending_total > 0:
+        st.write(
+            "- Review pending receipts and reconcile them with "
+            "confirmed payment records."
+        )
+
+    if len(monthly_values) >= 2:
+        if monthly_values.iloc[-1] < monthly_values.iloc[-2]:
+            st.write(
+                "- Review recent booking activity and investigate "
+                "possible reasons for the monthly decline."
+            )
+        elif monthly_values.iloc[-1] > monthly_values.iloc[-2]:
+            st.write(
+                "- Review which bookings or periods contributed to "
+                "the increase; do not assume the trend will continue."
+            )
+
+    st.write(
+        "- Continue checking extracted amounts against source receipts "
+        "and collect more months of verified data before relying on forecasts."
     )
 
 # --------------------------------------------------
