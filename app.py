@@ -742,6 +742,103 @@ else:
     )
 
 # --------------------------------------------------
+# HISTORICAL VALUES + NEXT-MONTH ESTIMATE CHART
+# --------------------------------------------------
+st.markdown("### 📊 Revenue Outlook")
+st.caption(
+    "Historical receipt values compared with a simple trend estimate."
+)
+
+forecast_monthly = (
+    filtered.dropna(subset=["booking_month"])
+    .groupby("booking_month")["amount_rm"]
+    .sum()
+    .sort_index()
+)
+
+if len(forecast_monthly) >= 3:
+    history = forecast_monthly.reset_index()
+    history.columns = ["Month", "Amount (RM)"]
+    history["Type"] = "Historical"
+
+    values = forecast_monthly.to_numpy(dtype=float)
+    x_values = np.arange(len(values), dtype=float)
+    slope, intercept = np.polyfit(x_values, values, 1)
+
+    estimate = max(
+        0.0,
+        float(slope * len(values) + intercept),
+    )
+
+    last_month = pd.Period(
+        str(forecast_monthly.index[-1]),
+        freq="M",
+    )
+    next_month = str(last_month + 1)
+
+    estimate_row = pd.DataFrame({
+        "Month": [next_month],
+        "Amount (RM)": [estimate],
+        "Type": ["Indicative estimate"],
+    })
+
+    chart_data = pd.concat(
+        [history, estimate_row],
+        ignore_index=True,
+    )
+
+    outlook_fig = px.bar(
+        chart_data,
+        x="Month",
+        y="Amount (RM)",
+        color="Type",
+        color_discrete_map={
+            "Historical": "#D8B45C",
+            "Indicative estimate": "#6CA6D9",
+        },
+        template="plotly_dark",
+        text="Amount (RM)",
+        title="Monthly Receipt Value: History vs Estimate",
+    )
+
+    outlook_fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#F5F0E5"),
+        title_font=dict(color="#E5C579", size=18),
+        xaxis=dict(title="Month", showgrid=False),
+        yaxis=dict(
+            title="Amount (RM)",
+            gridcolor="#37332A",
+            tickprefix="RM ",
+        ),
+        legend_title_text="Data type",
+        margin=dict(l=15, r=15, t=70, b=15),
+    )
+
+    outlook_fig.update_traces(
+        texttemplate="RM %{text:,.0f}",
+        textposition="outside",
+        cliponaxis=False,
+    )
+
+    st.plotly_chart(
+        outlook_fig,
+        use_container_width=True,
+        config={"displayModeBar": False},
+    )
+
+    st.caption(
+        "The estimate uses a straight-line trend, not confirmed future bookings. "
+        "Actual results may differ substantially."
+    )
+else:
+    st.info(
+        "At least three distinct months of receipt data are needed "
+        "to display this exploratory outlook chart."
+    )
+
+# --------------------------------------------------
 # RECEIPT DETAILS
 # --------------------------------------------------
 st.divider()
