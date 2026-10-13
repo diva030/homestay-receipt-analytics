@@ -910,6 +910,7 @@ else:
     )
 
 
+   
     # Premium summary panel
     summary_html = f"""
     <div style="
@@ -927,7 +928,8 @@ else:
             margin-bottom: 12px;
         ">
             Executive Summary
-        
+        </div>
+
         <div style="color: #F5F0E5; line-height: 1.8;">
             The current selection contains
             <b>{insight_count:,} receipt(s)</b> with a combined
@@ -939,7 +941,8 @@ else:
     </div>
     """
 
-    st.markdown(summary_html, unsafe_allow_html=True)
+    st.html(summary_html)
+
 
 
     summary_col1, summary_col2 = st.columns(2)
