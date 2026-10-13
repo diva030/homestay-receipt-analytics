@@ -866,6 +866,155 @@ else:
     )
 
 # --------------------------------------------------
+# EXECUTIVE INSIGHTS
+# --------------------------------------------------
+st.divider()
+st.subheader("💼 Executive Insights")
+st.caption(
+    "An automatically generated summary of the currently selected "
+    "fictional receipt records."
+)
+
+if filtered.empty:
+    st.info("Select receipts using the sidebar filters to generate insights.")
+else:
+    insight_total = filtered["amount_rm"].fillna(0).sum()
+
+    insight_paid = filtered.loc[
+        filtered["payment_status"] == "PAID",
+        "amount_rm",
+    ].fillna(0).sum()
+
+    insight_pending = filtered.loc[
+        filtered["payment_status"] == "PENDING",
+        "amount_rm",
+    ].fillna(0).sum()
+
+    insight_refunded = filtered.loc[
+        filtered["payment_status"] == "REFUNDED",
+        "amount_rm",
+    ].fillna(0).sum()
+
+    insight_count = len(filtered)
+
+    paid_share = (
+        insight_paid / insight_total * 100
+        if insight_total > 0
+        else 0
+    )
+
+    pending_share = (
+        insight_pending / insight_total * 100
+        if insight_total > 0
+        else 0
+    )
+
+    # Premium summary panel
+    st.markdown(
+        f"""
+        <div style="
+            background: linear-gradient(135deg, #282319, #191713);
+            border: 1px solid #80662F;
+            border-left: 5px solid #E5C579;
+            border-radius: 12px;
+            padding: 22px;
+            margin: 10px 0 18px 0;
+        ">
+            <div style="
+                color: #E5C579;
+                font-size: 19px;
+                font-weight: 700;
+                margin-bottom: 12px;
+            ">
+                Executive Summary
+            </div>
+            <div style="color: #F5F0E5; line-height: 1.8;">
+                The current selection contains
+                <b>{insight_count:,} receipt(s)</b> with a combined
+                receipt value of <b>RM {insight_total:,.2f}</b>.
+                An amount of <b>RM {insight_paid:,.2f}</b> is marked paid,
+                while <b>RM {insight_pending:,.2f}</b> is marked pending.
+                {f" Refunds recorded in this selection total RM {insight_refunded:,.2f}." if insight_refunded > 0 else ""}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    summary_col1, summary_col2 = st.columns(2)
+
+    with summary_col1:
+        st.markdown("### 💰 Payment Performance")
+
+        st.write(
+            f"**Paid share of selected receipt value:** "
+            f"{paid_share:.1f}%"
+        )
+
+        st.write(
+            f"**Pending share of selected receipt value:** "
+            f"{pending_share:.1f}%"
+        )
+
+        if insight_pending > 0:
+            st.warning(
+                "Action: review pending receipts and verify their "
+                "payment status against the source records."
+            )
+        else:
+            st.success(
+                "No positive pending amount appears in the current selection."
+            )
+
+    with summary_col2:
+        st.markdown("### 📊 Monthly Performance")
+
+        executive_monthly = (
+            filtered.dropna(subset=["booking_month"])
+            .groupby("booking_month")["amount_rm"]
+            .sum()
+            .sort_index()
+        )
+
+        if len(executive_monthly) >= 2:
+            previous_total = float(executive_monthly.iloc[-2])
+            latest_total = float(executive_monthly.iloc[-1])
+
+            st.write(
+                f"**Previous month:** RM {previous_total:,.2f}"
+            )
+
+            st.write(
+                f"**Latest month:** RM {latest_total:,.2f}"
+            )
+
+            if latest_total > previous_total:
+                st.success(
+                    "The latest month's receipt value is higher "
+                    "than the previous month's."
+                )
+            elif latest_total < previous_total:
+                st.warning(
+                    "The latest month's receipt value is lower "
+                    "than the previous month's. Investigate possible "
+                    "changes in booking activity."
+                )
+            else:
+                st.info(
+                    "Receipt values are unchanged between these months."
+                )
+        else:
+            st.info(
+                "At least two distinct months are needed for a "
+                "month-to-month comparison."
+            )
+
+    st.caption(
+        "These observations describe the selected practice data. "
+        "They do not establish the cause of a trend or guarantee future results."
+    )
+
+# --------------------------------------------------
 # RECEIPT DETAILS
 # --------------------------------------------------
 st.divider()
