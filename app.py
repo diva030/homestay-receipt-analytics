@@ -909,37 +909,38 @@ else:
         else 0
     )
 
+
     # Premium summary panel
-    st.markdown(
-        f"""
+    summary_html = f"""
+    <div style="
+        background: linear-gradient(135deg, #282319, #191713);
+        border: 1px solid #80662F;
+        border-left: 5px solid #E5C579;
+        border-radius: 12px;
+        padding: 22px;
+        margin: 10px 0 18px 0;
+    ">
         <div style="
-            background: linear-gradient(135deg, #282319, #191713);
-            border: 1px solid #80662F;
-            border-left: 5px solid #E5C579;
-            border-radius: 12px;
-            padding: 22px;
-            margin: 10px 0 18px 0;
+            color: #E5C579;
+            font-size: 19px;
+            font-weight: 700;
+            margin-bottom: 12px;
         ">
-            <div style="
-                color: #E5C579;
-                font-size: 19px;
-                font-weight: 700;
-                margin-bottom: 12px;
-            ">
-                Executive Summary
-            </div>
-            <div style="color: #F5F0E5; line-height: 1.8;">
-                The current selection contains
-                <b>{insight_count:,} receipt(s)</b> with a combined
-                receipt value of <b>RM {insight_total:,.2f}</b>.
-                An amount of <b>RM {insight_paid:,.2f}</b> is marked paid,
-                while <b>RM {insight_pending:,.2f}</b> is marked pending.
-                {f" Refunds recorded in this selection total RM {insight_refunded:,.2f}." if insight_refunded > 0 else ""}
-            </div>
+            Executive Summary
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        <div style="color: #F5F0E5; line-height: 1.8;">
+            The current selection contains
+            <b>{insight_count:,} receipt(s)</b> with a combined
+            receipt value of <b>RM {insight_total:,.2f}</b>.
+            An amount of <b>RM {insight_paid:,.2f}</b> is marked paid,
+            while <b>RM {insight_pending:,.2f}</b> is marked pending.
+            {f" Refunds recorded in this selection total RM {insight_refunded:,.2f}." if insight_refunded > 0 else ""}
+        </div>
+    </div>
+    """
+
+    st.markdown(summary_html, unsafe_allow_html=True)
+
 
     summary_col1, summary_col2 = st.columns(2)
 
