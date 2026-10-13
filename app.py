@@ -1019,6 +1019,348 @@ else:
     )
 
 # --------------------------------------------------
+# DOWNLOAD EXECUTIVE REPORT AS PDF
+# --------------------------------------------------
+from io import BytesIO
+from xml.sax.saxutils import escape
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+st.divider()
+st.subheader("📄 Download Executive Report")
+st.caption(
+    "Export a PDF report using the current dashboard filters. "
+    "This report contains fictional practice data."
+)
+
+
+def build_executive_pdf(report_data):
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+        title="Homestay Receipt Analytics - Executive Report",
+        author="Homestay Receipt Analytics",
+    )
+
+    styles = getSampleStyleSheet()
+
+    styles.add(ParagraphStyle(
+        name="GoldTitle",
+        parent=styles["Title"],
+        textColor=colors.HexColor("#B18A38"),
+        alignment=TA_CENTER,
+        fontSize=21,
+        leading=27,
+        spaceAfter=8,
+    ))
+
+    styles.add(ParagraphStyle(
+        name="GoldHeading",
+        parent=styles["Heading2"],
+        textColor=colors.HexColor("#8A6928"),
+        fontSize=13,
+        leading=17,
+        spaceBefore=12,
+        spaceAfter=7,
+    ))
+
+    styles.add(ParagraphStyle(
+        name="SmallNote",
+        parent=styles["Normal"],
+        textColor=colors.HexColor("#666666"),
+        fontSize=8,
+        leading=11,
+    ))
+
+    story = []
+
+    story.append(Paragraph(
+        "HOMESTAY RECEIPT ANALYTICS",
+        styles["GoldTitle"],
+    ))
+
+    story.append(Paragraph(
+        "EXECUTIVE PERFORMANCE REPORT",
+        styles["Heading2"],
+    ))
+
+    story.append(Spacer(1, 4 * mm))
+
+    story.append(Paragraph(
+        "<b>Report type:</b> Fictional training data",
+        styles["Normal"],
+    ))
+
+    story.append(Paragraph(
+        "<b>Receipts included:</b> "
+        + str(len(report_data)),
+        styles["Normal"],
+    ))
+
+    if start_date is not None and end_date is not None:
+        period_text = (
+            f"{start_date.strftime('%d/%m/%Y')} "
+            f"to {end_date.strftime('%d/%m/%Y')}"
+        )
+    else:
+        period_text = "All available dates"
+
+    story.append(Paragraph(
+        "<b>Selected date range:</b> "
+        + escape(period_text),
+        styles["Normal"],
+    ))
+
+    story.append(Paragraph(
+        "<b>Generated:</b> "
+        + pd.Timestamp.now().strftime("%d/%m/%Y %H:%M"),
+        styles["Normal"],
+    ))
+
+    story.append(Spacer(1, 5 * mm))
+
+    # Financial KPIs
+    report_amounts = report_data["amount_rm"].fillna(0)
+
+    report_total = float(report_amounts.sum())
+
+    report_paid = float(
+        report_data.loc[
+            report_data["payment_status"] == "PAID",
+            "amount_rm",
+        ].fillna(0).sum()
+    )
+
+    report_pending = float(
+        report_data.loc[
+            report_data["payment_status"] == "PENDING",
+            "amount_rm",
+        ].fillna(0).sum()
+    )
+
+    report_refunded = float(
+        report_data.loc[
+            report_data["payment_status"] == "REFUNDED",
+            "amount_rm",
+        ].fillna(0).sum()
+    )
+
+    story.append(Paragraph(
+        "Financial Overview",
+        styles["GoldHeading"],
+    ))
+
+    kpi_table = [
+        ["Metric", "Amount / Count"],
+        ["Total receipt value", f"RM {report_total:,.2f}"],
+        ["Marked paid", f"RM {report_paid:,.2f}"],
+        ["Marked pending", f"RM {report_pending:,.2f}"],
+        ["Marked refunded", f"RM {report_refunded:,.2f}"],
+        ["Receipt count", f"{len(report_data):,}"],
+    ]
+
+    table = Table(
+        kpi_table,
+        colWidths=[95 * mm, 70 * mm],
+        repeatRows=1,
+    )
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#30291B")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#F0D58A")),
+        ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#252525")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D6C59B")),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FAF8F2")),
+        ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+    ]))
+
+    story.append(table)
+
+    # Monthly analysis
+    story.append(Paragraph(
+        "Monthly Performance",
+        styles["GoldHeading"],
+    ))
+
+    monthly_report = (
+        report_data.dropna(subset=["booking_month"])
+        .groupby("booking_month", as_index=False)
+        .agg(
+            receipt_count=("receipt_no", "count"),
+            total_value=("amount_rm", "sum"),
+        )
+        .sort_values("booking_month")
+    )
+
+    monthly_rows = [
+        ["Booking month", "Receipt count", "Total value (RM)"]
+    ]
+
+    for _, row in monthly_report.iterrows():
+        monthly_rows.append([
+            str(row["booking_month"]),
+            str(int(row["receipt_count"])),
+            f'{row["total_value"]:,.2f}',
+        ])
+
+    if len(monthly_rows) == 1:
+        monthly_rows.append(["No monthly data", "0", "0.00"])
+
+    monthly_table = Table(
+        monthly_rows,
+        colWidths=[65 * mm, 45 * mm, 55 * mm],
+        repeatRows=1,
+    )
+
+    monthly_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#30291B")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#F0D58A")),
+        ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#252525")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D6C59B")),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FAF8F2")),
+        ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+    ]))
+
+    story.append(monthly_table)
+
+    # Executive insights
+    story.append(Paragraph(
+        "Executive Insights & Recommended Actions",
+        styles["GoldHeading"],
+    ))
+
+    if report_pending > 0:
+        pending_share_report = (
+            report_pending / report_total * 100
+            if report_total > 0
+            else 0
+        )
+
+        insight_text = (
+            f"RM {report_pending:,.2f} is marked pending, representing "
+            f"{pending_share_report:.1f}% of the selected receipt value. "
+            "Review these receipts and verify their payment status."
+        )
+    else:
+        insight_text = (
+            "No positive pending amount appears in the selected records. "
+            "Continue reconciling receipt records against source documents."
+        )
+
+    story.append(Paragraph(
+        escape(insight_text),
+        styles["Normal"],
+    ))
+
+    if len(monthly_report) >= 2:
+        previous = float(monthly_report.iloc[-2]["total_value"])
+        latest = float(monthly_report.iloc[-1]["total_value"])
+
+        if latest > previous:
+            trend_text = (
+                f"The latest month recorded RM {latest:,.2f}, "
+                f"higher than the previous month's RM {previous:,.2f}."
+            )
+        elif latest < previous:
+            trend_text = (
+                f"The latest month recorded RM {latest:,.2f}, "
+                f"lower than the previous month's RM {previous:,.2f}. "
+                "Investigate possible changes in booking activity."
+            )
+        else:
+            trend_text = (
+                "The latest and previous months recorded the same "
+                "total receipt value."
+            )
+
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph(
+            escape(trend_text),
+            styles["Normal"],
+        ))
+
+    story.append(Spacer(1, 5 * mm))
+
+    story.append(Paragraph(
+        "Important note: This report uses fictional practice data. "
+        "Receipt value is not necessarily accounting revenue. "
+        "All extracted figures should be checked against source documents. "
+        "Monthly comparisons describe historical values and do not guarantee "
+        "future performance.",
+        styles["SmallNote"],
+    ))
+
+    def add_page_number(canvas, document):
+        canvas.saveState()
+        canvas.setStrokeColor(colors.HexColor("#D6C59B"))
+        canvas.line(
+            18 * mm,
+            13 * mm,
+            A4[0] - 18 * mm,
+            13 * mm,
+        )
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(colors.HexColor("#666666"))
+        canvas.drawString(
+            18 * mm,
+            8 * mm,
+            "Homestay Receipt Analytics | Fictional Practice Report",
+        )
+        canvas.drawRightString(
+            A4[0] - 18 * mm,
+            8 * mm,
+            f"Page {document.page}",
+        )
+        canvas.restoreState()
+
+    doc.build(
+        story,
+        onFirstPage=add_page_number,
+        onLaterPages=add_page_number,
+    )
+
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+if filtered.empty:
+    st.info("Select receipts to generate an executive PDF report.")
+else:
+    pdf_bytes = build_executive_pdf(filtered.copy())
+
+    st.download_button(
+        label="📄 Download Executive Report (PDF)",
+        data=pdf_bytes,
+        file_name="homestay_executive_report.pdf",
+        mime="application/pdf",
+    )
+
+# --------------------------------------------------
 # RECEIPT DETAILS
 # --------------------------------------------------
 st.divider()
