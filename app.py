@@ -927,7 +927,7 @@ else:
             margin-bottom: 12px;
         ">
             Executive Summary
-        </div>
+        
         <div style="color: #F5F0E5; line-height: 1.8;">
             The current selection contains
             <b>{insight_count:,} receipt(s)</b> with a combined
